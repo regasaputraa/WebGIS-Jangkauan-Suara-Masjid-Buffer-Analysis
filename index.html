@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WebGIS | Coverage Suara Masjid — Ciputat</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-dark: #0a0e14;
+    --bg-panel: #111820;
+    --bg-card: #161f2c;
+    --accent-gold: #d4a853;
+    --accent-teal: #2dd4bf;
+    --accent-green: #4ade80;
+    --accent-red: #f87171;
+    --text-primary: #e8ecf0;
+    --text-muted: #7a8a9a;
+    --border: rgba(255,255,255,0.07);
+    --shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Space Mono', monospace;
+    background: var(--bg-dark);
+    color: var(--text-primary);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── HEADER ── */
+  #header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    height: 52px;
+    background: var(--bg-panel);
+    border-bottom: 1px solid var(--border);
+    z-index: 1000;
+    flex-shrink: 0;
+  }
+  #header .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  #header .logo-icon {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, var(--accent-gold), #b8860b);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+  #header .logo-text {
+    font-family: 'Tajawal', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  #header .logo-text span {
+    color: var(--accent-gold);
+  }
+  #header .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .badge {
+    background: rgba(212,168,83,0.12);
+    border: 1px solid rgba(212,168,83,0.3);
+    color: var(--accent-gold);
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  #coord-display {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-family: 'Space Mono', monospace;
+    min-width: 220px;
+    text-align: right;
+  }
+
+  /* ── MAIN LAYOUT ── */
+  #main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── SIDEBAR ── */
+  #sidebar {
+    width: 280px;
+    background: var(--bg-panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    z-index: 500;
+    flex-shrink: 0;
+    transition: margin-left 0.3s ease;
+  }
+  #sidebar.collapsed {
+    margin-left: -280px;
+  }
+
+  .sidebar-section {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sidebar-section-title {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sidebar-section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Layer toggle */
+  .layer-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    margin-bottom: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+    border: 1px solid transparent;
+  }
+  .layer-item:hover {
+    background: rgba(255,255,255,0.04);
+    border-color: var(--border);
+  }
+  .layer-item.active {
+    background: rgba(212,168,83,0.06);
+    border-color: rgba(212,168,83,0.2);
+  }
+
+  .toggle-switch {
+    width: 34px;
+    height: 18px;
+    background: #2a3544;
+    border-radius: 9px;
+    position: relative;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.2s;
+  }
+  .toggle-switch.on { background: var(--accent-teal); }
+  .toggle-switch::after {
+    content: '';
+    width: 14px;
+    height: 14px;
+    background: white;
+    border-radius: 50%;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.2s;
+  }
+  .toggle-switch.on::after { transform: translateX(16px); }
+
+  .layer-swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+  .layer-label { font-size: 11px; flex: 1; }
+  .layer-count {
+    font-size: 10px;
+    color: var(--text-muted);
+    background: rgba(255,255,255,0.05);
+    padding: 1px 6px;
+    border-radius: 3px;
+  }
+
+  /* Basemap selector */
+  .basemap-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .basemap-btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-family: 'Space Mono', monospace;
+  }
+  .basemap-btn:hover { border-color: var(--accent-gold); color: var(--text-primary); }
+  .basemap-btn.active { border-color: var(--accent-gold); color: var(--accent-gold); background: rgba(212,168,83,0.08); }
+  .basemap-btn .bm-icon { font-size: 18px; display: block; margin-bottom: 4px; }
+
+  /* Stats */
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 11px;
+  }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-label { color: var(--text-muted); }
+  .stat-value { color: var(--accent-teal); font-weight: 700; }
+
+  /* Legend */
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 11px;
+  }
+  .legend-swatch {
+    width: 28px;
+    height: 14px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+  .legend-symbol {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+  }
+
+  /* Opacity slider */
+  .opacity-control { margin-top: 8px; }
+  .opacity-label { font-size: 10px; color: var(--text-muted); margin-bottom: 4px; display: flex; justify-content: space-between; }
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    background: #2a3544;
+    border-radius: 2px;
+    outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    background: var(--accent-gold);
+    border-radius: 50%;
+    cursor: pointer;
+  }
+
+  /* Search */
+  .search-box {
+    display: flex;
+    gap: 6px;
+  }
+  .search-input {
+    flex: 1;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 10px;
+    color: var(--text-primary);
+    font-size: 11px;
+    font-family: 'Space Mono', monospace;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-input:focus { border-color: var(--accent-gold); }
+  .search-btn {
+    background: rgba(212,168,83,0.15);
+    border: 1px solid rgba(212,168,83,0.3);
+    color: var(--accent-gold);
+    border-radius: 6px;
+    padding: 7px 12px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s;
+  }
+  .search-btn:hover { background: rgba(212,168,83,0.25); }
+
+  /* ── MAP ── */
+  #map-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+  #map { width: 100%; height: 100%; }
+
+  /* Leaflet overrides */
+  .leaflet-control-zoom {
+    border: none !important;
+    box-shadow: var(--shadow) !important;
+  }
+  .leaflet-control-zoom a {
+    background: var(--bg-panel) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border) !important;
+    font-family: 'Space Mono', monospace !important;
+  }
+  .leaflet-control-zoom a:hover { background: var(--bg-card) !important; }
+  .leaflet-control-attribution { display: none; }
+
+  /* ── TOGGLE SIDEBAR BTN ── */
+  #toggle-sidebar {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 600;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    border-radius: 8px;
+    width: 36px;
+    height: 36px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    box-shadow: var(--shadow);
+    transition: all 0.2s;
+  }
+  #toggle-sidebar:hover { border-color: var(--accent-gold); }
+  #toggle-sidebar.show { display: flex; }
+
+  /* ── TOOLTIP / POPUP ── */
+  .custom-popup .leaflet-popup-content-wrapper {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 0;
+    color: var(--text-primary);
+  }
+  .custom-popup .leaflet-popup-tip-container { display: none; }
+  .custom-popup .leaflet-popup-content { margin: 0; min-width: 200px; }
+  .popup-header {
+    background: linear-gradient(135deg, rgba(212,168,83,0.15), rgba(212,168,83,0.05));
+    border-bottom: 1px solid rgba(212,168,83,0.2);
+    padding: 12px 16px;
+    border-radius: 12px 12px 0 0;
+  }
+  .popup-title {
+    font-family: 'Tajawal', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--accent-gold);
+    margin-bottom: 3px;
+  }
+  .popup-subtitle { font-size: 10px; color: var(--text-muted); }
+  .popup-body { padding: 12px 16px; }
+  .popup-row { display: flex; gap: 8px; margin-bottom: 6px; font-size: 10px; }
+  .popup-key { color: var(--text-muted); min-width: 70px; }
+  .popup-val { color: var(--text-primary); }
+  .popup-tag {
+    display: inline-block;
+    background: rgba(45,212,191,0.12);
+    border: 1px solid rgba(45,212,191,0.3);
+    color: var(--accent-teal);
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-top: 4px;
+  }
+
+  /* ── INFO PANEL (bottom) ── */
+  #info-panel {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    min-width: 200px;
+    box-shadow: var(--shadow);
+    z-index: 400;
+    font-size: 11px;
+    transition: opacity 0.3s;
+  }
+  #info-panel .ip-title {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+  .ip-stat { display: flex; justify-content: space-between; margin-bottom: 5px; }
+  .ip-stat-val { color: var(--accent-gold); font-weight: 700; }
+
+  /* ── SCALE BAR ── */
+  .leaflet-control-scale-line {
+    background: rgba(17,24,32,0.9) !important;
+    border-color: var(--accent-gold) !important;
+    color: var(--text-muted) !important;
+    font-family: 'Space Mono', monospace !important;
+    font-size: 9px !important;
+  }
+
+  /* ── NOTIFICATION ── */
+  #notification {
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-panel);
+    border: 1px solid var(--accent-teal);
+    border-radius: 8px;
+    padding: 8px 20px;
+    font-size: 11px;
+    color: var(--accent-teal);
+    z-index: 800;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  #notification.show { opacity: 1; }
+
+  /* ── MOBILE ── */
+  @media (max-width: 768px) {
+    #sidebar { position: absolute; top: 52px; left: 0; bottom: 0; z-index: 600; }
+    #sidebar.collapsed { margin-left: -280px; }
+    #toggle-sidebar { display: flex !important; }
+    #coord-display { display: none; }
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Mosque icon pulse */
+  .mosque-pulse {
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div id="header">
+  <div class="logo">
+    <div class="logo-icon">🕌</div>
+    <div class="logo-text">WebGIS <span>Masjid</span></div>
+  </div>
+  <div class="header-right">
+    <div class="badge">Ciputat · Tangerang Selatan</div>
+    <div id="coord-display">—</div>
+  </div>
+</div>
+
+<!-- TOGGLE SIDEBAR -->
+<button id="toggle-sidebar" onclick="toggleSidebar()">☰</button>
+
+<!-- MAIN -->
+<div id="main">
+
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+
+    <!-- SEARCH -->
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Cari Masjid</div>
+      <div class="search-box">
+        <input class="search-input" id="search-input" type="text" placeholder="Nama masjid..." oninput="searchMosque(this.value)">
+        <button class="search-btn" onclick="clearSearch()">✕</button>
+      </div>
+      <div id="search-results" style="margin-top:8px;"></div>
+    </div>
+
+    <!-- LAYER CONTROL -->
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Layer</div>
+
+      <div class="layer-item active" id="layer-masjid-item" onclick="toggleLayer('masjid')">
+        <div class="toggle-switch on" id="toggle-masjid"></div>
+        <div class="layer-swatch" style="background:#d4a853; border-radius:50%;"></div>
+        <div class="layer-label">Titik Masjid</div>
+        <div class="layer-count">24</div>
+      </div>
+
+      <div class="layer-item active" id="layer-buffer-item" onclick="toggleLayer('buffer')">
+        <div class="toggle-switch on" id="toggle-buffer"></div>
+        <div class="layer-swatch" style="background:rgba(45,212,191,0.5);border:1px solid #2dd4bf;"></div>
+        <div class="layer-label">Coverage Suara</div>
+        <div class="layer-count">24</div>
+      </div>
+
+      <div class="layer-item active" id="layer-building-item" onclick="toggleLayer('building')">
+        <div class="toggle-switch on" id="toggle-building"></div>
+        <div class="layer-swatch" style="background:rgba(248,113,113,0.5);border:1px solid #f87171;"></div>
+        <div class="layer-label">Bangunan Terdampak</div>
+        <div class="layer-count" id="building-count">—</div>
+      </div>
+
+      <!-- Opacity -->
+      <div class="opacity-control" style="margin-top:12px;">
+        <div class="opacity-label">
+          <span>Opacity Coverage</span>
+          <span id="opacity-val">40%</span>
+        </div>
+        <input type="range" min="0" max="100" value="40" id="opacity-slider" oninput="updateOpacity(this.value)">
+      </div>
+    </div>
+
+    <!-- BASEMAP -->
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Basemap</div>
+      <div class="basemap-grid">
+        <div class="basemap-btn active" id="bm-osm" onclick="setBasemap('osm')">
+          <span class="bm-icon">🗺️</span>OpenStreetMap
+        </div>
+        <div class="basemap-btn" id="bm-satellite" onclick="setBasemap('satellite')">
+          <span class="bm-icon">🛰️</span>Satellite
+        </div>
+        <div class="basemap-btn" id="bm-topo" onclick="setBasemap('topo')">
+          <span class="bm-icon">🏔️</span>Topo
+        </div>
+        <div class="basemap-btn" id="bm-dark" onclick="setBasemap('dark')">
+          <span class="bm-icon">🌙</span>Dark
+        </div>
+      </div>
+    </div>
+
+    <!-- STATISTICS -->
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Statistik</div>
+      <div class="stat-row">
+        <span class="stat-label">Total Masjid</span>
+        <span class="stat-value">24</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Bangunan Masjid</span>
+        <span class="stat-value" id="stat-mosque">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Musholla</span>
+        <span class="stat-value" id="stat-musholla">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Bangunan Terdampak</span>
+        <span class="stat-value" id="stat-buildings">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Radius Coverage</span>
+        <span class="stat-value">±116m</span>
+      </div>
+    </div>
+
+    <!-- LEGEND -->
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Legenda</div>
+      <div class="legend-item">
+        <div class="legend-symbol" style="background:rgba(212,168,83,0.2);border:2px solid #d4a853;">🕌</div>
+        <span>Masjid / Musholla</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background:rgba(45,212,191,0.35);border:2px solid #2dd4bf;"></div>
+        <span>Zone Coverage Suara (buffer)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background:rgba(248,113,113,0.5);border:2px solid #f87171;"></div>
+        <span>Bangunan dalam Coverage</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background:rgba(74,222,128,0.4);border:2px solid #4ade80;"></div>
+        <span>Overlap Coverage (multi-masjid)</span>
+      </div>
+    </div>
+
+    <!-- TOOLS -->
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Tools</div>
+      <button class="basemap-btn" style="width:100%;margin-bottom:6px;display:flex;align-items:center;gap:8px;padding:10px;" onclick="fitAllLayers()">
+        <span>🔍</span> Zoom ke Semua Layer
+      </button>
+      <button class="basemap-btn" style="width:100%;margin-bottom:6px;display:flex;align-items:center;gap:8px;padding:10px;" onclick="toggleHeatOverlap()">
+        <span id="heat-icon">🟢</span> <span id="heat-label">Tampilkan Overlap</span>
+      </button>
+      <button class="basemap-btn" style="width:100%;display:flex;align-items:center;gap:8px;padding:10px;" onclick="exportInfo()">
+        <span>📋</span> Ringkasan Data
+      </button>
+    </div>
+
+  </div><!-- /sidebar -->
+
+  <!-- MAP -->
+  <div id="map-container">
+    <div id="map"></div>
+
+    <!-- INFO PANEL -->
+    <div id="info-panel">
+      <div class="ip-title">Info Wilayah</div>
+      <div class="ip-stat"><span>Kecamatan</span><span class="ip-stat-val">Ciputat</span></div>
+      <div class="ip-stat"><span>Kota</span><span class="ip-stat-val">Tangerang Selatan</span></div>
+      <div class="ip-stat"><span>Provinsi</span><span class="ip-stat-val">Banten</span></div>
+      <div class="ip-stat"><span>Zoom</span><span class="ip-stat-val" id="zoom-level">—</span></div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- NOTIFICATION -->
+<div id="notification"></div>
+
+<!-- SCRIPTS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
+
+<script>
+// ── PROJECTION ──
+proj4.defs('EPSG:32748', '+proj=utm +zone=48 +south +datum=WGS84 +units=m +no_defs');
+
+function utmToLatLng(x, y) {
+  const [lng, lat] = proj4('EPSG:32748', 'EPSG:4326', [x, y]);
+  return [lat, lng];
+}
+
+function convertCoords(coords) {
+  if (typeof coords[0] === 'number') return utmToLatLng(coords[0], coords[1]).reverse();
+  return coords.map(convertCoords);
+}
+
+function convertFeature(feature) {
+  const geom = feature.geometry;
+  let newCoords;
+  if (geom.type === 'Point') {
+    newCoords = utmToLatLng(geom.coordinates[0], geom.coordinates[1]).reverse();
+  } else {
+    newCoords = convertCoords(geom.coordinates);
+  }
+  return { ...feature, geometry: { ...geom, coordinates: newCoords } };
+}
+
+// ── RAW DATA (embedded) ──
+const MASJID_RAW = [
+  { osm_id: 534499160, name: "Masjid Fathullah UIN Jakarta", building: "mosque", coords: [694304.846, 9302395.869] },
+  { osm_id: 1449727113, name: "Masjid Agung Al-Jihad Ciputat", building: "yes", coords: [693323.519, 9302131.919] },
+  { osm_id: 534440095, name: "Masjid Darul Arqom", building: "mosque", coords: [694335.415, 9303168.622] },
+  { osm_id: 1449726254, name: null, building: "yes", coords: [693077.973, 9302021.203] },
+  { osm_id: 817278485, name: "Musholla Al-Jihad Ciputat", building: "yes", coords: [693482.380, 9302313.768] },
+  { osm_id: 817266864, name: "Masjid Graha Hijau 2", building: "yes", coords: [693313.647, 9303138.755] },
+  { osm_id: 1409418783, name: "MUSHOLA AL IKHLAS", building: "yes", denomination: "sunni", coords: [692933.280, 9301388.086] },
+  { osm_id: 816906333, name: "Mushola Khassan Al-Khainnah", building: "yes", coords: [693425.594, 9302750.454] },
+  { osm_id: 534472215, name: "Mushollah Mursan Harun Nurrasyid Ciputat", building: "yes", coords: [693546.422, 9302709.006] },
+  { osm_id: 534474852, name: "Masjid Al Muhajirin", building: "mosque", coords: [693855.374, 9302427.701] },
+  { osm_id: 534472347, name: "Masjid Al Husna", building: "mosque", coords: [694010.964, 9302381.474] },
+  { osm_id: 537169580, name: "Masjid Baiturrahmah", building: "mosque", coords: [694113.207, 9301846.947] },
+  { osm_id: 159938721, name: null, building: "church", coords: [693720.936, 9301561.424] },
+  { osm_id: 540190012, name: "Masjid Nurul Iman", building: "mosque", coords: [693965.133, 9301506.799] },
+  { osm_id: 736463472, name: "Masjid Ar Riyadh Cipayung", building: null, coords: [693316.719, 9301225.967] },
+  { osm_id: 536230835, name: "Masjid Al-Munawaroh", building: "mosque", coords: [694407.935, 9301193.189] },
+  { osm_id: 534421724, name: "Masjid Al Husainy", building: "mosque", coords: [694140.456, 9302770.201] },
+  { osm_id: 534421801, name: "Masjid Nurul Huda", building: "mosque", coords: [694084.962, 9302673.545] },
+  { osm_id: 481502302, name: "Masjid Baiturrahman", building: "mosque", coords: [692535.749, 9302483.570] },
+  { osm_id: 159946525, name: "Masjid Ruhama", building: "mosque", coords: [694666.308, 9301506.519] },
+  { osm_id: 817270930, name: "Masjid Nurul Huda Ciputat", building: "yes", coords: [693407.144, 9302534.428] },
+  { osm_id: 537165462, name: "Masjid Andalusia Madrasah Pembangunan UIN Jakarta", building: "yes", denomination: "sunni", coords: [694498.549, 9302026.927] },
+  { osm_id: 534522984, name: null, building: "yes", coords: [694681.371, 9302304.453] },
+  { osm_id: 534502757, name: "Masjid Al-Jami'ah", building: null, coords: [694107.786, 9302601.180] },
+];
+
+// ── MAP INIT ──
+const map = L.map('map', {
+  center: [-6.310, 106.745],
+  zoom: 15,
+  zoomControl: false
+});
+
+L.control.zoom({ position: 'bottomright' }).addTo(map);
+L.control.scale({ position: 'bottomleft', imperial: false }).addTo(map);
+
+// ── BASEMAPS ──
+const basemaps = {
+  osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 20 }),
+  satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 20 }),
+  topo: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17 }),
+  dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 20 }),
+};
+basemaps.osm.addTo(map);
+let currentBasemap = 'osm';
+
+function setBasemap(name) {
+  map.removeLayer(basemaps[currentBasemap]);
+  basemaps[name].addTo(map);
+  map.eachLayer(l => { if (l !== basemaps[name]) l.bringToFront?.(); });
+  currentBasemap = name;
+  document.querySelectorAll('.basemap-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('bm-' + name).classList.add('active');
+  // re-add layers on top
+  [bufferLayer, buildingLayer, masjidLayer].forEach(l => { if (map.hasLayer(l)) { map.removeLayer(l); map.addLayer(l); } });
+  showNotif('Basemap: ' + name.toUpperCase());
+}
+
+// ── LAYER GROUPS ──
+let masjidLayer = L.layerGroup();
+let bufferLayer = L.layerGroup();
+let buildingLayer = L.layerGroup();
+let overlapLayer = L.layerGroup();
+let layerState = { masjid: true, buffer: true, building: true };
+let currentOpacity = 0.40;
+let overlapVisible = false;
+
+// ── MOSQUE ICONS ──
+function getMosqueIcon(type) {
+  const isMusholla = type && (type.toLowerCase().includes('mushol') || type.toLowerCase().includes('musholla'));
+  const color = isMusholla ? '#f59e0b' : '#d4a853';
+  const size = isMusholla ? 26 : 32;
+  return L.divIcon({
+    html: `<div style="
+      width:${size}px;height:${size}px;
+      background:${color};
+      border-radius:50% 50% 50% 0;
+      transform:rotate(-45deg);
+      border:2px solid rgba(255,255,255,0.6);
+      box-shadow:0 2px 8px rgba(0,0,0,0.4);
+      display:flex;align-items:center;justify-content:center;">
+      <span style="transform:rotate(45deg);font-size:${size*0.5}px;">🕌</span>
+    </div>`,
+    className: '',
+    iconSize: [size, size],
+    iconAnchor: [size/2, size],
+    popupAnchor: [0, -size]
+  });
+}
+
+// ── BUILD MOSQUE MARKERS ──
+let mosqueMarkers = [];
+let mosqueCount = { mosque: 0, musholla: 0 };
+
+MASJID_RAW.forEach(d => {
+  const [lat, lng] = utmToLatLng(d.coords[0], d.coords[1]);
+  const name = d.name || '(Tanpa Nama)';
+  const isMusholla = name.toLowerCase().includes('mushol');
+  if (isMusholla) mosqueCount.musholla++;
+  else mosqueCount.mosque++;
+
+  const icon = getMosqueIcon(name);
+  const marker = L.marker([lat, lng], { icon })
+    .bindPopup(buildMosquePopup(d, lat, lng), { className: 'custom-popup', maxWidth: 280 });
+
+  marker._mosqueData = d;
+  marker._latLng = [lat, lng];
+  mosqueMarkers.push(marker);
+  masjidLayer.addLayer(marker);
+});
+
+document.getElementById('stat-mosque').textContent = mosqueCount.mosque;
+document.getElementById('stat-musholla').textContent = mosqueCount.musholla;
+
+function buildMosquePopup(d, lat, lng) {
+  const name = d.name || '(Tanpa Nama)';
+  const isMusholla = name.toLowerCase().includes('mushol');
+  const typeLabel = isMusholla ? 'Musholla' : 'Masjid';
+  const buildingLabel = d.building === 'mosque' ? 'Masjid' : d.building === 'church' ? 'Gereja' : d.building || '—';
+  const denomLabel = d.denomination || 'Muslim';
+  return `
+    <div>
+      <div class="popup-header">
+        <div class="popup-title">${name}</div>
+        <div class="popup-subtitle">${typeLabel} · OSM ID: ${d.osm_id}</div>
+      </div>
+      <div class="popup-body">
+        <div class="popup-row"><span class="popup-key">Tipe</span><span class="popup-val">${typeLabel}</span></div>
+        <div class="popup-row"><span class="popup-key">Bangunan</span><span class="popup-val">${buildingLabel}</span></div>
+        <div class="popup-row"><span class="popup-key">Agama</span><span class="popup-val">${denomLabel}</span></div>
+        <div class="popup-row"><span class="popup-key">Koordinat</span><span class="popup-val">${lat.toFixed(5)}, ${lng.toFixed(5)}</span></div>
+        <div><span class="popup-tag">Coverage ±116m</span></div>
+      </div>
+    </div>`;
+}
+
+// ── BUFFER POLYGONS ──
+// We generate approximate circular buffers from mosque points (116m radius) in WGS84
+// since the actual buffer geojson is in UTM and too large to embed directly
+function createCircleBuffer(lat, lng, radiusM, sides=64) {
+  const pts = [];
+  const R = 6378137;
+  for (let i = 0; i <= sides; i++) {
+    const angle = (i / sides) * 2 * Math.PI;
+    const dx = radiusM * Math.cos(angle);
+    const dy = radiusM * Math.sin(angle);
+    const dLat = (dy / R) * (180 / Math.PI);
+    const dLng = (dx / (R * Math.cos(lat * Math.PI / 180))) * (180 / Math.PI);
+    pts.push([lat + dLat, lng + dLng]);
+  }
+  return pts;
+}
+
+MASJID_RAW.forEach((d, i) => {
+  const [lat, lng] = utmToLatLng(d.coords[0], d.coords[1]);
+  const name = d.name || '(Tanpa Nama)';
+  const poly = L.polygon(createCircleBuffer(lat, lng, 116), {
+    color: '#2dd4bf',
+    weight: 1.5,
+    fillColor: '#2dd4bf',
+    fillOpacity: currentOpacity,
+    opacity: 0.7
+  });
+  poly._mosqueData = d;
+  poly.bindPopup(`
+    <div>
+      <div class="popup-header">
+        <div class="popup-title">Zone Coverage</div>
+        <div class="popup-subtitle">${name}</div>
+      </div>
+      <div class="popup-body">
+        <div class="popup-row"><span class="popup-key">Radius</span><span class="popup-val">±116 meter</span></div>
+        <div class="popup-row"><span class="popup-key">Pusat</span><span class="popup-val">${lat.toFixed(5)}, ${lng.toFixed(5)}</span></div>
+        <div><span class="popup-tag">Suara Adzan / Pengajian</span></div>
+      </div>
+    </div>`, { className: 'custom-popup' });
+  bufferLayer.addLayer(poly);
+});
+
+// ── BUILDING INTERSECT ──
+// Parse from embedded snippet - we'll embed a simplified version
+// Actually read from the geojson content we know
+const BUILDINGS_SAMPLE = [
+  [[694341.448,9302486.063],[694358.290,9302485.929],[694358.371,9302496.822],[694341.529,9302496.956]],
+  [[694297.164,9302516.062],[694303.302,9302511.728],[694308.105,9302518.447],[694301.967,9302522.781]],
+  [[694307.570,9302510.851],[694314.329,9302506.747],[694319.748,9302515.555],[694313.000,9302519.658]],
+  [[694321.702,9302514.166],[694333.860,9302506.582],[694336.641,9302510.974],[694324.483,9302518.558]],
+  [[694416.186,9302413.548],[694425.517,9302407.799],[694429.967,9302405.063],[694432.593,9302409.279],[694428.165,9302412.003],[694434.050,9302421.417],[694424.697,9302427.178]],
+  [[694403.347,9302429.240],[694416.302,9302421.897],[694422.513,9302432.715],[694409.558,9302440.058]],
+  [[694377.965,9302426.926],[694386.723,9302425.061],[694389.364,9302437.250],[694380.618,9302439.127]],
+  [[694379.524,9302443.035],[694390.484,9302437.910],[694394.742,9302446.887],[694383.771,9302452.012]],
+  [[694406.305,9302404.037],[694426.616,9302395.862],[694430.064,9302404.311],[694409.764,9302412.497]],
+  [[694392.338,9302396.840],[694401.159,9302394.078],[694403.217,9302400.552],[694394.396,9302403.314]],
+  [[694358.512,9302403.490],[694367.963,9302399.897],[694372.149,9302410.523],[694362.697,9302414.116]],
+  [[694341.688,9302408.952],[694348.997,9302404.440],[694356.036,9302415.855],[694348.716,9302420.367]],
+  [[694315.501,9302416.386],[694320.461,9302410.965],[694326.789,9302416.756],[694322.131,9302421.924]],
+  [[694288.960,9302425.614],[694300.053,9302419.213],[694306.107,9302429.619],[694295.007,9302436.020]],
+  [[694276.441,9302434.026],[694285.399,9302427.685],[694291.433,9302436.441],[694282.458,9302442.801]],
+  [[694327.026,9302461.432],[694343.044,9302453.226],[694348.099,9302463.002],[694332.073,9302471.208]],
+  [[694344.534,9302452.444],[694360.552,9302444.245],[694365.604,9302454.021],[694349.583,9302462.220]],
+  [[694361.940,9302443.394],[694377.958,9302435.188],[694383.010,9302444.967],[694366.989,9302453.166]],
+  [[694310.578,9302470.441],[694326.596,9302462.235],[694331.651,9302472.011],[694315.630,9302480.211]],
+  [[694293.173,9302479.448],[694309.191,9302471.247],[694314.243,9302481.018],[694298.225,9302489.222]],
+];
+
+let buildingPolygons = [];
+BUILDINGS_SAMPLE.forEach(coordArr => {
+  const latlngs = coordArr.map(([x, y]) => utmToLatLng(x, y));
+  const poly = L.polygon(latlngs, {
+    color: '#f87171',
+    weight: 1,
+    fillColor: '#f87171',
+    fillOpacity: 0.45,
+    opacity: 0.8,
+    className: 'building-poly'
+  });
+  poly.bindPopup(`
+    <div>
+      <div class="popup-header">
+        <div class="popup-title">Bangunan Terdampak</div>
+        <div class="popup-subtitle">Dalam Zona Coverage Suara</div>
+      </div>
+      <div class="popup-body">
+        <div class="popup-row"><span class="popup-key">Tipe</span><span class="popup-val">Bangunan Umum</span></div>
+        <div><span class="popup-tag">Dalam Jangkauan Suara Masjid</span></div>
+      </div>
+    </div>`, { className: 'custom-popup' });
+  buildingPolygons.push(poly);
+  buildingLayer.addLayer(poly);
+});
+
+const bCount = buildingPolygons.length;
+document.getElementById('building-count').textContent = bCount;
+document.getElementById('stat-buildings').textContent = bCount + '+';
+
+// ── OVERLAP DETECTION (visual approximation) ──
+// Find areas where 2+ buffers overlap by checking nearby mosques
+function buildOverlapLayer() {
+  overlapLayer.clearLayers();
+  const pts = MASJID_RAW.map(d => utmToLatLng(d.coords[0], d.coords[1]));
+  const radius = 116;
+
+  for (let i = 0; i < pts.length; i++) {
+    for (let j = i + 1; j < pts.length; j++) {
+      const dist = map.distance(pts[i], pts[j]);
+      if (dist < radius * 2) {
+        // Draw intersection region as a small circle at midpoint
+        const midLat = (pts[i][0] + pts[j][0]) / 2;
+        const midLng = (pts[i][1] + pts[j][1]) / 2;
+        const overlapR = (radius * 2 - dist) / 2;
+        if (overlapR > 5) {
+          L.circle([midLat, midLng], {
+            radius: overlapR,
+            color: '#4ade80',
+            weight: 1,
+            fillColor: '#4ade80',
+            fillOpacity: 0.3,
+            opacity: 0.6
+          }).addTo(overlapLayer);
+        }
+      }
+    }
+  }
+}
+
+// ── ADD ALL LAYERS ──
+bufferLayer.addTo(map);
+buildingLayer.addTo(map);
+masjidLayer.addTo(map);
+
+// ── LAYER TOGGLE ──
+function toggleLayer(name) {
+  layerState[name] = !layerState[name];
+  const layerMap = { masjid: masjidLayer, buffer: bufferLayer, building: buildingLayer };
+  const layer = layerMap[name];
+  const toggle = document.getElementById('toggle-' + name);
+  const item = document.getElementById('layer-' + name + '-item');
+
+  if (layerState[name]) {
+    map.addLayer(layer);
+    toggle.classList.add('on');
+    item.classList.add('active');
+    showNotif('Layer ' + name + ' ditampilkan');
+  } else {
+    map.removeLayer(layer);
+    toggle.classList.remove('on');
+    item.classList.remove('active');
+    showNotif('Layer ' + name + ' disembunyikan');
+  }
+}
+
+// ── OPACITY ──
+function updateOpacity(val) {
+  currentOpacity = val / 100;
+  document.getElementById('opacity-val').textContent = val + '%';
+  bufferLayer.eachLayer(l => l.setStyle({ fillOpacity: currentOpacity }));
+}
+
+// ── OVERLAP TOGGLE ──
+function toggleHeatOverlap() {
+  overlapVisible = !overlapVisible;
+  if (overlapVisible) {
+    buildOverlapLayer();
+    overlapLayer.addTo(map);
+    document.getElementById('heat-icon').textContent = '🔴';
+    document.getElementById('heat-label').textContent = 'Sembunyikan Overlap';
+    showNotif('Overlap zone ditampilkan');
+  } else {
+    map.removeLayer(overlapLayer);
+    document.getElementById('heat-icon').textContent = '🟢';
+    document.getElementById('heat-label').textContent = 'Tampilkan Overlap';
+  }
+}
+
+// ── FIT LAYERS ──
+function fitAllLayers() {
+  const pts = MASJID_RAW.map(d => utmToLatLng(d.coords[0], d.coords[1]));
+  const bounds = L.latLngBounds(pts);
+  map.fitBounds(bounds.pad(0.15));
+  showNotif('Zoom ke semua layer');
+}
+
+// ── SEARCH ──
+function searchMosque(query) {
+  const q = query.toLowerCase().trim();
+  const container = document.getElementById('search-results');
+  if (!q) { container.innerHTML = ''; return; }
+
+  const results = MASJID_RAW.filter(d => d.name && d.name.toLowerCase().includes(q));
+  if (results.length === 0) {
+    container.innerHTML = '<div style="font-size:10px;color:var(--text-muted);padding:4px;">Tidak ditemukan</div>';
+    return;
+  }
+  container.innerHTML = results.map(d => `
+    <div onclick="flyToMosque(${d.coords[0]}, ${d.coords[1]}, '${(d.name||'').replace(/'/g,"\\'")}', ${d.osm_id})"
+      style="padding:7px 10px;border-radius:6px;margin-bottom:3px;cursor:pointer;font-size:10px;
+             background:var(--bg-card);border:1px solid var(--border);
+             transition:border-color 0.2s;"
+      onmouseover="this.style.borderColor='var(--accent-gold)'"
+      onmouseout="this.style.borderColor='var(--border)'">
+      <div style="color:var(--accent-gold);margin-bottom:2px;">🕌 ${d.name}</div>
+      <div style="color:var(--text-muted);">OSM: ${d.osm_id}</div>
+    </div>`).join('');
+}
+
+function flyToMosque(x, y, name, id) {
+  const [lat, lng] = utmToLatLng(x, y);
+  map.flyTo([lat, lng], 18, { duration: 1.5 });
+  setTimeout(() => {
+    mosqueMarkers.forEach(m => {
+      if (m._mosqueData.osm_id === id) m.openPopup();
+    });
+  }, 1800);
+  document.getElementById('search-results').innerHTML = '';
+  document.getElementById('search-input').value = name;
+}
+
+function clearSearch() {
+  document.getElementById('search-input').value = '';
+  document.getElementById('search-results').innerHTML = '';
+}
+
+// ── EXPORT INFO ──
+function exportInfo() {
+  const lines = [
+    '=== RINGKASAN DATA WEBGIS MASJID CIPUTAT ===',
+    '',
+    'Total Titik Masjid/Musholla : 24',
+    'Bangunan Masjid              : ' + mosqueCount.mosque,
+    'Musholla                     : ' + mosqueCount.musholla,
+    'Bangunan Terdampak           : ' + bCount + '+',
+    'Radius Coverage              : ±116 meter',
+    'CRS Sumber                   : EPSG:32748 (UTM Zone 48S)',
+    'Lokasi                       : Ciputat, Tangerang Selatan, Banten',
+    '',
+    '--- DAFTAR MASJID ---',
+    ...MASJID_RAW.map((d, i) => `${i+1}. ${d.name || '(Tanpa Nama)'} [OSM: ${d.osm_id}]`)
+  ];
+  alert(lines.join('\n'));
+}
+
+// ── COORDINATE DISPLAY ──
+map.on('mousemove', e => {
+  document.getElementById('coord-display').textContent =
+    `${e.latlng.lat.toFixed(5)}° N  ${e.latlng.lng.toFixed(5)}° E`;
+});
+
+// ── ZOOM DISPLAY ──
+function updateZoom() {
+  document.getElementById('zoom-level').textContent = map.getZoom();
+}
+map.on('zoomend', updateZoom);
+updateZoom();
+
+// ── NOTIFICATION ──
+let notifTimer;
+function showNotif(msg) {
+  const el = document.getElementById('notification');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(notifTimer);
+  notifTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ── SIDEBAR TOGGLE ──
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  sb.classList.toggle('collapsed');
+}
+
+// ── INIT ──
+fitAllLayers();
+setTimeout(() => showNotif('WebGIS Coverage Suara Masjid — Siap Digunakan'), 500);
+</script>
+</body>
+</html>
